@@ -57,3 +57,61 @@ Angular CLI does not come with an end-to-end testing framework by default. You c
 ## Additional Resources
 
 For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+
+ng add @ngrx/effects@latest
+# or
+npm install @ngrx/effects
+
+
+import { inject } from '@angular/core';
+import { Actions, createEffect, ofType } from '@ngrx/effects';
+import { MyApiService } from '../services/my-api.service';
+import { MyActions } from './my.actions';
+import { catchError, map, mergeMap, of } from 'rxjs';
+
+export const loadItems$ = createEffect(
+  (actions$ = inject(Actions), apiService = inject(MyApiService)) => 
+    actions$.pipe(
+      ofType(MyActions.loadItems),                // listen for loadItems action
+      mergeMap(() => 
+        apiService.getItems().pipe(
+          map(items => MyActions.loadItemsSuccess({ items })),
+          catchError(error => of(MyActions.loadItemsFailure({ error })))
+        )
+      )
+    ),
+  { functional: true }  // recommended effect style for Standalone/Angular 19+
+);
+
+
+import { provideEffects } from '@ngrx/effects';
+import { AppComponent } from './app.component';
+import { MyEffects } from './effects/my.effects';
+
+bootstrapApplication(AppComponent, {
+  providers: [
+    provideEffects(MyEffects)
+  ]
+});
+
+
+import { EffectsModule } from '@ngrx/effects';
+import { MyEffects } from './effects/my.effects';
+
+@NgModule({
+  imports: [
+    EffectsModule.forRoot([MyEffects])
+  ]
+})
+export class AppModule {}
+
+
+import { Store } from '@ngrx/store';
+import { MyActions } from './store/my.actions';
+
+constructor(private store: Store) {}
+
+ngOnInit() {
+  this.store.dispatch(MyActions.loadItems());
+}
+
